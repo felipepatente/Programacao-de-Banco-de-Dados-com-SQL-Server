@@ -1,0 +1,8 @@
+Group by
+
+Agregação x agrupamento
+
+agrupamento é separar coisas
+
+
+Junto com um group by vem um agregação

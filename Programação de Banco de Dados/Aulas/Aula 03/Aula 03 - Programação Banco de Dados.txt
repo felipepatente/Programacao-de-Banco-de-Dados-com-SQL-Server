@@ -1,0 +1,16 @@
+isso é para ver o nome do computador
+window + r = cmd enter hostname 
+
+login = sa
+senha = adminadmin
+
+datacenter do senac 
+
+Nome do servidor: 10.135.0.53\sqledutsi
+Autenticação: Autenticação do SQL Server
+Logon = aluno
+senha = aluno
+
+
+SELECT title, price AS 'Preço do Livro' price * 1.1 AS 'Novo Campo'
+FROM titles

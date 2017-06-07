@@ -1,0 +1,5 @@
+INNER JOIN
+
+SELECT <sel list>
+FROM tab1, tab2
+WHERE tab1.pk = tab2.fk AND tab1.valor > 10
