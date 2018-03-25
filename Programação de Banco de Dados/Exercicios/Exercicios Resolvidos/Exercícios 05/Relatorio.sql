@@ -1,0 +1,282 @@
+CREATE TABLE USUARIO(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	NOME VARCHAR(50),
+	SOBRENOME VARCHAR(50),
+	CPF VARCHAR(11)
+);
+
+
+
+CREATE TABLE EXTRA(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	DATA DATETIME,
+	QTD_HORASEXTRAS MONEY,
+	ID_USUARIO INT,
+
+	CONSTRAINT FK_EXTRA_USUARIO FOREIGN KEY (ID_USUARIO) REFERENCES USUARIO (ID)
+);
+
+
+
+CREATE TABLE NORMAL(
+	ID INT IDENTITY(1,1) PRIMARY KEY,
+	DATA DATETIME,
+	QTD_HORASNORMAIS MONEY,
+	ID_USUARIO INT,
+
+	CONSTRAINT FK_NORMAL_USUARIO FOREIGN KEY (ID_USUARIO) REFERENCES USUARIO (ID)
+);
+
+INSERT INTO USUARIO (NOME, SOBRENOME, CPF) 
+										VALUES ('FELIPE','PATENTE','48978877787'),
+											   ('IGOR','RAMOS','37867766676'),
+											   ('LUCIANO','MIGUEL','26756655565'),
+											   ('JULIANA','OLIVEIRA','15645555554')
+
+
+INSERT INTO EXTRA (DATA,QTD_HORASEXTRAS,ID_USUARIO)
+												  VALUES ('25-03-2018',32,1),
+														 ('27-04-2018',40,2),
+														 ('30-04-2018',13,4),
+														 ('05-05-2018',27,3),
+														 ('06-05-2018',31,1),
+														 ('20-05-2018',32,2)
+
+
+
+
+INSERT INTO NORMAL(DATA,QTD_HORASNORMAIS,ID_USUARIO)
+												VALUES ('25-03-2018',8,1),
+														('27-04-2018',10,2),
+														('30-04-2018',6,4),
+														('05-05-2018',5,3),
+														('06-05-2018',8,1),
+														('20-05-2018',9,2)
+
+
+SELECT B.NOME, A.DATA, A.QTD_HORASNORMAIS, C.QTD_HORASEXTRAS
+FROM NORMAL (NOLOCK) A
+LEFT JOIN USUARIO (NOLOCK) B
+ON A.ID_USUARIO = B.ID
+LEFT JOIN EXTRA (NOLOCK) C
+ON B.ID = C.ID_USUARIO
+
+
+DECLARE @vNOME								VARCHAR(50)
+DECLARE @vSOBRENOME							VARCHAR(50)
+DECLARE @vDATE								DATETIME
+DECLARE @vNORMAL							MONEY
+DECLARE @vEXTRA								MONEY
+DECLARE @vID_USUARIO						INT
+DECLARE @vHTML								VARCHAR(MAX)
+DECLARE @vSEQ								INT
+DECLARE @vQTD_NORMAL						MONEY = 1
+DECLARE @vQTD_EXTRA							MONEY = 0
+DECLARE @vTOTAL								MONEY = 0
+
+
+CREATE TABLE TEMPORARIA (
+	ID INT IDENTITY(1,1),
+	NOME VARCHAR(50),
+	SOBRENOME VARCHAR(50),
+	DATA DATETIME,
+	NORMAL MONEY,
+	EXTRA MONEY,
+	ID_USUARIO INT
+);
+
+
+DECLARE cur_USUARIO CURSOR FOR
+	SELECT NOME, SOBRENOME
+	FROM USUARIO
+
+OPEN cur_USUARIO
+
+FETCH NEXT FROM cur_USUARIO
+INTO  @vNOME, @vSOBRENOME
+
+WHILE @@FETCH_STATUS = 0
+	BEGIN		
+		
+		INSERT INTO TEMPORARIA(NOME, SOBRENOME) VALUES (@vNOME,@vSOBRENOME)	
+		
+		FETCH NEXT FROM cur_USUARIO
+		INTO  @vNOME, @vSOBRENOME			
+
+	END
+
+CLOSE cur_USUARIO
+DEALLOCATE cur_USUARIO
+
+
+
+DECLARE cur_EXTRAS CURSOR FOR
+	SELECT DATA, QTD_HORASEXTRAS, ID_USUARIO
+	FROM EXTRA
+
+OPEN cur_EXTRAS
+
+FETCH NEXT FROM cur_EXTRAS
+INTO  @vDATE, @vEXTRA, @vID_USUARIO
+
+WHILE @@FETCH_STATUS = 0
+	BEGIN
+		
+		IF (SELECT COUNT(EXTRA) FROM TEMPORARIA  WHERE ID = @vID_USUARIO) = 0
+			BEGIN
+				UPDATE TEMPORARIA SET DATA = @vDATE, EXTRA = @vEXTRA WHERE ID = @vID_USUARIO  						
+			END
+		ELSE
+			BEGIN
+				SELECT @vEXTRA = @vEXTRA + EXTRA 
+				FROM TEMPORARIA
+				WHERE ID = @vID_USUARIO
+
+				UPDATE TEMPORARIA SET EXTRA = @vEXTRA WHERE ID = @vID_USUARIO							
+			END
+		
+		
+		FETCH NEXT FROM cur_EXTRAS
+		INTO  @vDATE, @vEXTRA, @vID_USUARIO
+		
+				
+	END
+
+CLOSE cur_EXTRAS
+DEALLOCATE cur_EXTRAS
+
+
+
+DECLARE cur_NORMAL CURSOR FOR
+	SELECT QTD_HORASNORMAIS, ID_USUARIO
+	FROM NORMAL
+
+OPEN cur_NORMAL
+
+FETCH NEXT FROM cur_NORMAL
+INTO  @vNORMAL, @vID_USUARIO
+
+WHILE @@FETCH_STATUS = 0
+	BEGIN
+		
+		IF (SELECT COUNT(NORMAL) FROM TEMPORARIA  WHERE ID = @vID_USUARIO) = 0
+			BEGIN
+				UPDATE TEMPORARIA SET NORMAL = @vNORMAL WHERE ID = @vID_USUARIO  						
+			END
+		ELSE
+			BEGIN
+				SELECT @vNORMAL = @vNORMAL + NORMAL
+				FROM TEMPORARIA
+				WHERE ID = @vID_USUARIO
+
+				UPDATE TEMPORARIA SET NORMAL = @vNORMAL WHERE ID = @vID_USUARIO							
+			END
+		
+		
+		FETCH NEXT FROM cur_NORMAL
+		INTO @vNORMAL, @vID_USUARIO
+		
+				
+	END
+
+CLOSE cur_NORMAL
+DEALLOCATE cur_NORMAL
+
+SET @vHTML = '<!DOCTYPE HTML>'
+SET @vHTML = @vHTML +  '<HTML>'
+SET @vHTML = @vHTML + '<head>'
+SET @vHTML = @vHTML + '<title>Relatorio</title>'
+SET @vHTML = @vHTML + '<meta charset="utf-8">'
+SET @vHTML = @vHTML + '</head>'
+SET @vHTML = @vHTML + '<body>'
+SET @vHTML = @vHTML + '<table  border="1" cellspacing="0" cellpadding="2" bordercolor="666633" width="100%">'
+SET @vHTML = @vHTML + '<tr>'
+SET @vHTML = @vHTML + '<td width="5%" align="center"><b>Seq</b></td>'
+SET @vHTML = @vHTML + '<td width="20%" align="center"><b>Nome</b></td>'
+SET @vHTML = @vHTML + '<td width="20%" align="center"><b>Sobrenome</b></td>'
+SET @vHTML = @vHTML + '<td width="15%" align="center"><b>Data<b></td>'
+SET @vHTML = @vHTML + '<td width="20%" align="center"><b>Horas Normais</b></td>'
+SET @vHTML = @vHTML + '<td width="20%" align="center"><b>Horas Extras</b></td>'
+SET @vHTML = @vHTML + '</tr>'
+
+
+
+DECLARE cur_TABELA CURSOR FOR 
+
+SELECT NOME, SOBRENOME, DATA, NORMAL, EXTRA
+FROM TEMPORARIA
+
+OPEN cur_TABELA
+
+FETCH NEXT FROM cur_TABELA
+INTO  @vNOME, @vSOBRENOME, @vDATE, @vNORMAL, @vEXTRA
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+	
+	
+	SET @vHTML = @vHTML + '<tr>'
+	SET @vHTML = @vHTML + '<td width="5%" align="center">'+ CAST(ISNULL(@vSEQ,'') AS VARCHAR) +'</td>'
+	SET @vHTML = @vHTML + '<td width="20%" align="left">' + ISNULL(@vNOME,'') + '</td>'
+	SET @vHTML = @vHTML + '<td width="20%" align="left">' + ISNULL(@vSOBRENOME,'') + '</td>'
+	SET @vHTML = @vHTML + '<td width="15%" align="center">' + CAST(ISNULL(@vDATE,'') AS VARCHAR) + '</td>'
+	SET @vHTML = @vHTML + '<td width="20%" align="right">' + CAST(ISNULL(@vNORMAL,'') AS VARCHAR) + '</td>'
+	SET @vHTML = @vHTML + '<td width="20%" align="right">' + CAST(ISNULL(@vEXTRA,'') AS VARCHAR) + '</td>'
+	SET @vHTML = @vHTML + '</tr>'
+
+	SET @vSEQ = @vSEQ + 1
+
+	FETCH NEXT FROM cur_TABELA
+	INTO  @vNOME, @vSOBRENOME, @vDATE, @vNORMAL, @vEXTRA
+
+
+
+END
+
+CLOSE cur_TABELA
+DEALLOCATE cur_TABELA
+
+
+SELECT @vQTD_NORMAL = SUM(NORMAL), @vQTD_EXTRA = SUM(EXTRA)
+FROM TEMPORARIA
+
+SELECT @vTOTAL = @vQTD_NORMAL + @vQTD_EXTRA
+
+SET @vHTML = @vHTML + '<tr>'
+SET @vHTML = @vHTML + '<td width="60%" align="center" colspan="4"><b>Totais</b></td>'
+SET @vHTML = @vHTML + '<td width="20%" align="right">'+ CAST(@vQTD_NORMAL AS VARCHAR) +'</td>'
+SET @vHTML = @vHTML + '<td width="20%" align="right">'+ CAST(@vQTD_EXTRA AS VARCHAR) +'</td>'
+SET @vHTML = @vHTML + '</tr>'
+
+
+SET @vHTML = @vHTML + '<tr>'
+SET @vHTML = @vHTML + '<td width="60%" align="center" colspan="4"><b>TotaL</b></td>'
+SET @vHTML = @vHTML + '<td width="20%" align="right" colspan="2">'+ CAST(@vTOTAL AS VARCHAR) +'</td>'
+SET @vHTML = @vHTML + '</tr>'
+
+SET @vHTML = @vHTML + '</table>'
+SET @vHTML = @vHTML + '</body>'
+SET @vHTML = @vHTML + '</HTML>'
+
+
+
+SELECT @vHTML
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
