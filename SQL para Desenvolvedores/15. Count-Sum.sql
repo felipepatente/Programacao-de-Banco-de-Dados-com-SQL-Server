@@ -1,0 +1,1 @@
+SELECT COUNT(*), SUM(TotalHoras), SUM(Valor) FROM Cursos
