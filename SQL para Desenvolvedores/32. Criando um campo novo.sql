@@ -1,0 +1,3 @@
+ALTER TABLE Categorias ADD Teste VARCHAR(100) DEFAULT 'Teste', NovoCampo INT DEFAULT 0
+
+SELECT * FROM Categorias (NOLOCK)
